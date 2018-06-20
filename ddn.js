@@ -1,6 +1,6 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 window.DdnJS = require('./index.js');
-window.DdnJS.options.set('nethash','b11fa2f2')
+window.DdnJS.options.set('nethash','fl6ybowg')
 //window.DdnJS.options.set('nethash','0ab796cd') // 测试网络
 },{"./index.js":2}],2:[function(require,module,exports){
 module.exports = {
@@ -36,10 +36,9 @@ var base58check = require('./base58check')
 var options = require('./options');
 var constants = require('./constants');
 
-const NORMAL_PREFIX = constants.nethash[options.get('nethash')].tokenPrefix // D
-
 module.exports = {
   isAddress: function (address) {
+    const NORMAL_PREFIX = constants.nethash[options.get('nethash')].tokenPrefix // D
     if (typeof address !== 'string') {
       return false
     }
@@ -55,6 +54,7 @@ module.exports = {
   },
 
   isBase58CheckAddress: function (address) {
+    const NORMAL_PREFIX = constants.nethash[options.get('nethash')].tokenPrefix // D
     if (typeof address !== 'string') {
       return false
     }
@@ -68,6 +68,7 @@ module.exports = {
   },
 
   generateBase58CheckAddress: function (publicKey) {
+    const NORMAL_PREFIX = constants.nethash[options.get('nethash')].tokenPrefix // D
     if (typeof publicKey === 'string') {
       publicKey = Buffer.from(publicKey, 'hex')
     }
@@ -278,7 +279,16 @@ module.exports = {
       tokenName: 'EOK',
       tokenPrefix: 'E',
       beginDate: new Date(Date.UTC(2018, 5, 18, 4, 0, 0, 0)), // 2018-06-18T04:00:00.000Z +8
-    }
+    },
+
+    // lims testnet
+    '2mn7qoar': {
+      tokenName: 'LIMS',
+      tokenPrefix: 'L',
+      beginDate: new Date(Date.UTC(2018, 5, 18, 4, 0, 0, 0)), // 2018-06-18T04:00:00.000Z +8
+    },
+
+
   }
 
 }
@@ -286,7 +296,7 @@ module.exports = {
 },{}],8:[function(require,module,exports){
 var optionMap = {
   clientDriftSeconds: 5,
-  nethash: '0ab796cd', //default ddn testnet. EOK mainnet: 315by9uk, testnet: fl6ybowg   
+  nethash: 'fl6ybowg', //fl6ybowg 0ab796cd default ddn testnet. EOK mainnet: 315by9uk, testnet: fl6ybowg   
 }
 
 module.exports = {
@@ -747,7 +757,7 @@ function getOrgBytes(org) {
     throw Error(e.toString());
   }
 
-  return bb.toBuffer();
+  return toLocalBuffer(bb);
 }
 
 function getExchangeBytes(asset) {
@@ -764,7 +774,7 @@ function getExchangeBytes(asset) {
   } catch (e) {
     throw Error(e.toString());
   }
-  return bb.toBuffer();
+  return toLocalBuffer(bb);
 }
 
 function getContributionBytes(asset) {
@@ -776,7 +786,7 @@ function getContributionBytes(asset) {
   bb.writeUTF8String(asset.url);
   bb.flip();
 
-  return bb.toBuffer();
+  return toLocalBuffer(bb);
 }
 
 function getConfirmationBytes(asset) {
@@ -788,34 +798,41 @@ function getConfirmationBytes(asset) {
     bb.writeInt32(asset.state);
     bb.flip();
 
-    return bb.toBuffer();
+    return toLocalBuffer(bb);
 }
 
 function getEvidenceBytes(evidence) {
   const buf = new Buffer([]);
 
+  const bb = new ByteBuffer();
+
   try {
-    const ipidBuf = new Buffer(evidence.ipid, 'utf8');
-    const titleBuf = new Buffer(evidence.title, 'utf8');
-    const tagsBuf = new Buffer(evidence.tags, 'utf8');
-    const urlBuf = new Buffer(evidence.url, 'utf8');
-    const authorBuf = new Buffer(evidence.author, 'utf8');
+    // const ipidBuf = new Buffer(evidence.ipid, 'utf8');
+    // const titleBuf = new Buffer(evidence.title, 'utf8');
+    // const tagsBuf = new Buffer(evidence.tags, 'utf8');
+    // const urlBuf = new Buffer(evidence.url, 'utf8');
+    // const authorBuf = new Buffer(evidence.author, 'utf8');
 
-    buf = Buffer.concat([buf, ipidBuf, titleBuf, tagsBuf, urlBuf, authorBuf]);
+    // buf = Buffer.concat([buf, ipidBuf, titleBuf, tagsBuf, urlBuf, authorBuf]);
 
-    const bb = new ByteBuffer();
+    bb.writeString(evidence.ipid);
+    bb.writeString(evidence.title);
+    bb.writeString(evidence.tags);
+    bb.writeString(evidence.url);
+    bb.writeString(evidence.author);
+    
     bb.writeString(evidence.hash);
     bb.writeString(evidence.size ? evidence.size : '');
     bb.writeString(evidence.type);
 
     bb.flip();
 
-    buf = Buffer.concat([buf, bb.toBuffer()]);
+    // buf = Buffer.concat([buf, bb.toBuffer()]);
   } catch (e) {
     throw Error(e.toString());
   }
 
-  return buf;
+  return toLocalBuffer(bb);
 }
 
 function getBytes(transaction, skipSignature, skipSecondSignature) {
@@ -1257,7 +1274,31 @@ function createOrg(org, secret, secondSecret) {
 	return transaction;
 }
 
-function createConfirmation(confirmation, secret, secondSecret) {
+function createTransfer(address, secret, secondSecret) {
+    var keys = crypto.getKeys(secret);
+    var fee = constants.fees.org;
+
+    var transaction = {
+        type: trsTypes.SEND,
+        nethash: options.get('nethash'),
+        amount: 100000000000,
+        fee: fee,
+        recipientId: address,
+        senderPublicKey: keys.publicKey,
+        timestamp: slots.getTime() - options.get('clientDriftSeconds')
+    };
+
+    crypto.sign(transaction, keys);
+    
+    if (secondSecret) {
+        var secondKeys = crypto.getKeys(secondSecret);
+        crypto.secondSign(transaction, secondKeys);
+    }
+
+    return transaction;
+}
+
+function createConfirmation(confirmation, secret, secondSecret, amount) {
     var keys = crypto.getKeys(secret);
     var bytes = null;
 
@@ -1285,14 +1326,14 @@ function createConfirmation(confirmation, secret, secondSecret) {
         throw new Error('Invalid state format');
     }
 
-	var fee = constants.fees.org;
-    
+    var fee = constants.fees.org;
+
     var transaction = {
         type: trsTypes.CONFIRMATION,
         nethash: options.get('nethash'),
-        amount: 0,
+        amount: amount,
         fee: fee,
-        recipientId: null,
+        recipientId: confirmation.receivedAddress,
         senderPublicKey: keys.publicKey,
         timestamp: slots.getTime() - options.get('clientDriftSeconds'),
         asset: {
@@ -1370,6 +1411,7 @@ function createContribution(contribution, secret, secondSecret) {
 module.exports = {
     createOrg: createOrg,
     createConfirmation: createConfirmation,
+    createTransfer: createTransfer,
 	createContribution: createContribution
 };
 
