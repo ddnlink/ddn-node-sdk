@@ -7,11 +7,10 @@ module.exports = {
 	transaction : require("./lib/transactions/transaction.js"),
 	vote : require("./lib/transactions/vote.js"),
 	aob: require("./lib/transactions/aob.js"),
-	storage: require("./lib/transactions/storage.js"),	
 	username: require("./lib/transactions/username.js"),
-	domain: require("./lib/transactions/domain.js"),			
 	multitransfer: require("./lib/transactions/multitransfer.js"),		
 	options: require("./lib/options.js"),
+	constants: require("./lib/constants.js"),
 	utils: {
 		slots: require("./lib/time/slots.js"),
 		format: require("./lib/time/format.js")
